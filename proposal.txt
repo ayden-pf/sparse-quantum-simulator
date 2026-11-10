@@ -1,0 +1,30 @@
+Project Proposal: Sparse Quantum Simulation (Project 1)
+
+Motivation:
+
+
+Quantum computers provide theoretical and computational advantages for select problems. They rely on quantum mechanics encompassed by a physical experiment. Quantum computers are expensive and complex physical systems that can perform these physical experiments. Therefore, access to quantum hardware and real systems is limited for the everyday programmer. Quantum simulators are software programs that allow engineers to run quantum circuits and algorithms on classical hardware.
+Secondarily, quantum computers can produce unreliable results due to decoherence and hardware fragility. Physical experiments cause errors, requiring physical qubit mapping to logical qubits for error correction. Simulators can emulate noiseless environments that can not be realized in today’s experiments, allowing researchers to separate algorithm bugs from hardware errors. Simulators provide quantum-like computation to interested programmers and aid quantum research.
+Unfortunately, classical simulation becomes computationally expensive as the number of qubits increases. Because linear increases in qubits exponentially increase the state-vector representation, classical memory usage grows exponentially to support such states. This makes simulation of complex quantum circuits computationally expensive.
+We can leverage the algebra between various circuit operations to improve simulation efficiency and memory usage. We can simulate a quantum circuit as a sequence of unitary operations to state, which is constructed via matrix operations. Dense matrices store and process every matrix entry, even when entries are zero or have predictable structure. We will explore several strategies to reduce unnecessary storage and computation.
+Sparse representations: 
+Most gates in a realistic circuit are highly structured; phase gates are diagonal, CNOT and Toffoli are just permutations, controlled gates leave half the state untouched. Storing these as full matrices wastes both memory and arithmetic. We plan to classify gates by the structure they actually have and keep each in a correspondingly compact form, applying them directly to the state rather than building large operators. Where several structured gates appear in sequence, we expect to be able to combine them into a single operation.
+Tensor networks: 
+Treating the circuit as a network of connected tensors, rather than a fixed sequence of matrix multiplications, lets us choose the order in which contractions happen. That ordering is where most of the performance comes from, so a significant part of the work will be exploring search strategies for good contraction paths and understanding when memory limits force us to trade extra computation for a smaller footprint. We also intend to match the MPS to the circuit for chain-like connectivity. A related question we want to investigate is qubit ordering: existing simulators generally keep qubits in the order the user declared them, which can be a poor fit for circuits where interacting qubits end up far apart, and we suspect reordering will yield substantial gains.
+Specialized operations: 
+The structure we exploit in the sparse representation should carry over into the tensor network, letting diagonal and permutation gates be handled far more cheaply than general ones. We also plan to look at identifying portions of a circuit that fall into classes with known efficient simulation methods and routing them accordingly, so the expensive machinery is reserved for the parts that need it. Throughout, we will look for opportunities to parallelize; both within individual operations and across independent parts of a contraction with the ARC cluster as the target platform.
+Proposed Implementation:
+
+	We intend to implement a python library that leverages Qiskit’s existing QuantumCircuit class and be used as a drop-in replacement for their own internal simulator implementations. The simulator class will contain a run function that returns a result object, with a counts dictionary of measurement outcomes. Internally, a few steps will need to be done. First, we will have to convert the quantumCircuit into a usable representation for our engine to consume, including factoring the endianness of Qiskit. Next, we will have to implement the engine. We initially plan to implement an MPS based solution, and may extend it to support TTNs if time permits. We also plan to implement GPU parallelism for tensor calculations, likely leveraging PyTorch internally. 
+	In order to validate our solution, we will be using the SupermarQ Benchmark library. This library provides a function to generate test circuits of different size and type (GHZ, Mermin-Bell, etc.). We will run these circuits using Qiskit’s simulators and our own, and then compare for correctness, time, and memory usage. For correctness, we will check the Hellinger fidelity. Time will be calculated by wrapping the simulator calls, while memory usage will be more complex to calculate if we compare a CPU algorithm with a GPU based implementation. We will need further investigation on the exact mechanism we will use for this. 
+
+References: 
+
+Orús, A Practical Introduction to Tensor Networks: Matrix Product States and Projected Entangled Pair States: arXiv:1306.2164
+Schollwöck, The density-matrix renormalization group in the age of matrix product states: arXiv:1008.3477.
+Vidal, Efficient classical simulation of slightly entangled quantum computations: arXiv:quant-ph/0301063
+Tomesh, et al., SupermarQ: A Scalable Quantum Benchmark Suit arXiv:2202.11045
+
+Github Repo:
+https://github.com/ayden-pf/sparse-quantum-simulator
+
