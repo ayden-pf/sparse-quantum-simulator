@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqsim"
+version = "0.1.0"
+description = "Gate-based quantum circuit simulator exploiting sparse structure and tensor networks; drop-in for Qiskit simulators"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "qiskit>=2.0,<3",
+    "numpy>=2.0",
+]
+
+[project.optional-dependencies]
+# Testing: qiskit-aer is the reference simulator we compare against.
+dev = [
+    "pytest>=8",
+    "qiskit-aer>=0.17",
+]
+# Benchmark circuit generation (GHZ, Mermin-Bell, ...).
+bench = [
+    "supermarq>=0.5",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

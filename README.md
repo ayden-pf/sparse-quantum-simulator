@@ -6,6 +6,19 @@ This is a course project for CSC 569 (Quantum Computing), a graduate class at No
 
 > **Status:** Early development. This README describes the project's planned design and scope; the implementation is not available yet.
 
+## Development setup
+
+Requires Python 3.11 or newer (tested on 3.14).
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev,bench]"
+pytest
+```
+
+The `dev` extra installs `pytest` and `qiskit-aer`, which serves as the reference simulator. The `bench` extra installs `supermarq` for generating benchmark circuits. The package is imported as `sqsim`.
+
 ## Motivation
 
 Access to quantum hardware is limited, and today's devices produce unreliable results because of decoherence and hardware fragility. Classical simulators give programmers a way to run quantum circuits without hardware, and their noiseless execution lets researchers separate algorithm bugs from hardware errors.
