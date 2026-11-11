@@ -1,19 +1,19 @@
-"""Front end: convert a Qiskit ``QuantumCircuit`` into the sqsim IR.
+"""Front end: convert a Qiskit QuantumCircuit into the sqsim IR.
 
 This is the only module (besides the public simulator wrapper) that knows about
-Qiskit's data model. Engines consume :class:`sqsim.ir.Circuit` exclusively.
+Qiskit's data model. Engines consume Circuit objects exclusively.
 
 Supported input
 ---------------
-* Any unitary operation: standard gates, ``UnitaryGate``, composite gates such
-  as ``QFTGate``, and gate-only sub-circuits appended via ``to_instruction()``.
+* Any unitary operation: standard gates, UnitaryGate, composite gates such
+  as QFTGate, and gate-only sub-circuits appended via to_instruction().
   The matrix comes from Qiskit itself, so no basis-gate transpilation is needed.
-* ``measure``, as long as each measured qubit is not acted on afterwards
+* measure, as long as each measured qubit is not acted on afterwards
   (terminal measurement) and each clbit is written at most once.
-* ``barrier`` and ``delay`` are ignored (no effect on an ideal simulation).
+* barrier and delay are ignored (no effect on an ideal simulation).
 
-Everything else (``reset``, control flow such as ``if_test``, mid-circuit
-measurement, unbound parameters) raises :class:`UnsupportedCircuitError`.
+Everything else (reset, control flow such as if_test, mid-circuit
+measurement, unbound parameters) raises UnsupportedCircuitError.
 """
 
 from __future__ import annotations
@@ -36,9 +36,9 @@ class UnsupportedCircuitError(ValueError):
 
 
 def from_qiskit(qc: QuantumCircuit) -> Circuit:
-    """Convert ``qc`` to an IR :class:`~sqsim.ir.Circuit`.
+    """Convert qc to an IR :class:~sqsim.ir.Circuit.
 
-    Qubit/clbit indices are Qiskit's flat indices (``qc.find_bit(bit).index``),
+    Qubit/clbit indices are Qiskit's flat indices (qc.find_bit(bit).index),
     and gate matrices keep Qiskit's little-endian ordering, so no bit
     reordering happens here.
     """
@@ -61,6 +61,7 @@ def from_qiskit(qc: QuantumCircuit) -> Circuit:
         op = inst.operation
         name = op.name
         qubits = tuple(qc.find_bit(q).index for q in inst.qubits)
+        # Used for debugging errors
         where = f"instruction {position} ({name!r} on qubits {qubits})"
 
         if name in _IGNORED:
@@ -101,7 +102,7 @@ def from_qiskit(qc: QuantumCircuit) -> Circuit:
 
 
 def _unitary(op: Instruction, where: str) -> np.ndarray:
-    """Return the unitary matrix of ``op`` in Qiskit's little-endian ordering."""
+    """Return the unitary matrix of op in Qiskit's little-endian ordering."""
     if op.num_clbits:
         raise UnsupportedCircuitError(f"{where}: operation uses classical bits")
     if isinstance(op, QiskitGate):
@@ -118,7 +119,7 @@ def _unitary(op: Instruction, where: str) -> np.ndarray:
 
 
 def _numeric_params(op: Instruction) -> tuple[float, ...]:
-    """Real scalar params of ``op``. Non-scalar params (e.g. UnitaryGate's matrix) are dropped."""
+    """Real scalar params of op. Non-scalar params (e.g. UnitaryGate's matrix) are dropped."""
     out = []
     for p in op.params:
         if isinstance(p, ParameterExpression):
