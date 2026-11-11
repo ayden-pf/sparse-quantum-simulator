@@ -4,7 +4,9 @@ A gate-based quantum circuit simulator for Python that improves compute and memo
 
 This is a course project for CSC 569 (Quantum Computing), a graduate class at North Carolina State University.
 
-> **Status:** Early development. This README describes the project's planned design and scope; the implementation is not available yet.
+> **Status:** Early development. The Qiskit front end, a dense state-vector
+> baseline engine, and the `Simulator.run()` API work and are tested against
+> Qiskit Aer. Structured and MPS engines are planned.
 
 ## Development setup
 
@@ -18,6 +20,13 @@ pytest
 ```
 
 The `dev` extra installs `pytest` and `qiskit-aer`, which serves as the reference simulator. The `bench` extra installs `supermarq` for generating benchmark circuits. The package is imported as `sqsim`.
+
+## Usage
+
+```python
+import sqsim
+counts = sqsim.Simulator().run(qc, shots=1024).result().get_counts()
+```
 
 ## Motivation
 
