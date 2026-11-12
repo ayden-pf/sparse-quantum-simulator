@@ -19,9 +19,13 @@ from __future__ import annotations
 
 import numpy as np
 
+from sqsim.engines.sampling import (
+    SeedLike,
+    check_sampling_args,
+    counts_from_probabilities,
+    marginals_from_statevector,
+)
 from sqsim.ir import Circuit, Gate
-
-SeedLike = int | np.random.Generator | None
 
 
 def statevector(circuit: Circuit) -> np.ndarray:
@@ -47,25 +51,8 @@ def sample_counts(circuit: Circuit, shots: int, seed: SeedLike = None) -> dict[s
     between classical registers. The IR doesn't know about registers, so
     inserting those spaces is the public API's job.
     """
-    if circuit.num_clbits == 0:
-        raise ValueError("circuit has no classical bits, so there is nothing to count")
-    if shots < 1:
-        raise ValueError(f"shots must be positive, got {shots}")
-
-    probs = marginal_probabilities(circuit)
-    probs = probs / probs.sum()  # remove float drift before sampling
-    rng = np.random.default_rng(seed)
-    outcome_counts = rng.multinomial(shots, probs)
-
-    m = len(circuit.measurements)
-    counts: dict[str, int] = {}
-    for outcome in np.flatnonzero(outcome_counts):
-        value = 0
-        for j, meas in enumerate(circuit.measurements):
-            bit = (int(outcome) >> (m - 1 - j)) & 1
-            value |= bit << meas.clbit
-        counts[f"{value:0{circuit.num_clbits}b}"] = int(outcome_counts[outcome])
-    return counts
+    check_sampling_args(circuit, shots)
+    return counts_from_probabilities(marginal_probabilities(circuit), circuit, shots, seed)
 
 
 def marginal_probabilities(circuit: Circuit) -> np.ndarray:
@@ -75,11 +62,7 @@ def marginal_probabilities(circuit: Circuit) -> np.ndarray:
     circuit.measurements: measurement 0 is the most significant bit. With
     no measurements, the result is [1.0].
     """
-    n = circuit.num_qubits
-    probs = np.abs(statevector(circuit)) ** 2
-    measured_axes = [n - 1 - meas.qubit for meas in circuit.measurements]
-    probs = np.moveaxis(probs.reshape((2,) * n), measured_axes, range(len(measured_axes)))
-    return probs.reshape(2 ** len(measured_axes), -1).sum(axis=1)
+    return marginals_from_statevector(statevector(circuit), circuit)
 
 
 def _apply(psi: np.ndarray, gate: Gate) -> np.ndarray:

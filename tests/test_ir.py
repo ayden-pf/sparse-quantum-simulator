@@ -85,3 +85,42 @@ def test_circuit_validates_indices():
         c.add_measure(Measure(qubit=0, clbit=1))
     with pytest.raises(ValueError):
         Circuit(num_qubits=1, gates=[Gate("x", (1,), X)])
+
+
+# --- control detection -------------------------------------------------------
+
+from qiskit.circuit.library import CHGate, CRYGate, CZGate, MCXGate, RYGate, RZZGate  # noqa: E402
+from qiskit.quantum_info import Operator  # noqa: E402
+
+from sqsim.ir import split_controls  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "qiskit_gate, controls, target",
+    [
+        (CXGate(), (0,), X),
+        (CHGate(), (0,), HGate().to_matrix()),
+        (CRYGate(0.4), (0,), RYGate(0.4).to_matrix()),
+        (CCXGate(), (0, 1), X),
+        (Operator(MCXGate(3)), (0, 1, 2), X),
+        (CZGate(), (0, 1), [[-1]]),  # symmetric: every bit is a control
+        (CPhaseGate(0.3), (0, 1), [[np.exp(0.3j)]]),
+        (HGate(), (), HGate().to_matrix()),
+        (SwapGate(), (), SwapGate().to_matrix()),
+        (RZZGate(0.5), (), RZZGate(0.5).to_matrix()),  # diagonal, but no control
+    ],
+    ids=lambda v: getattr(v, "name", None),
+)
+def test_split_controls(qiskit_gate, controls, target):
+    matrix = qiskit_gate.data if isinstance(qiskit_gate, Operator) else qiskit_gate.to_matrix()
+    found, sub = split_controls(matrix)
+    assert found == controls
+    np.testing.assert_allclose(sub, np.asarray(target, dtype=complex), atol=1e-12)
+
+
+def test_split_controls_finds_control_in_any_position():
+    # CX with the control on the gate's second qubit (bit 1).
+    cx_reversed = CXGate().to_matrix()[np.ix_([0, 2, 1, 3], [0, 2, 1, 3])]
+    controls, sub = split_controls(cx_reversed)
+    assert controls == (1,)
+    np.testing.assert_allclose(sub, X)

@@ -68,6 +68,48 @@ def classify(matrix: np.ndarray, atol: float = ATOL) -> GateKind:
     return GateKind.DENSE
 
 
+def split_controls(matrix: np.ndarray, atol: float = ATOL) -> tuple[tuple[int, ...], np.ndarray]:
+    """Factor out every control bit of ``matrix``.
+
+    Bit ``b`` (little-endian, as in :class:`Gate`) is a control when the gate
+    acts as the identity whenever that bit is 0, i.e.
+    ``U = |0><0|_b (x) I + |1><1|_b (x) V``. Returns ``(controls, V)``:
+    ``controls`` are the control bit positions in increasing order, and ``V``
+    is the gate applied when all of them are 1, acting on the remaining bit
+    positions (still little-endian, in increasing order). If every bit is a
+    control, ``V`` is a ``1 x 1`` phase on the all-ones state.
+
+    Whether a bit is a control doesn't depend on which other bits were already
+    factored out, so the result doesn't depend on the order bits are checked.
+
+    >>> from qiskit.circuit.library import CZGate
+    >>> split_controls(CZGate().to_matrix())
+    ((0, 1), array([[-1.+0.j]]))
+    """
+    sub = np.asarray(matrix, dtype=np.complex128)
+    k = sub.shape[0].bit_length() - 1
+    remaining = list(range(k))  # original bit positions still in ``sub``
+    controls = []
+    for position in range(k):
+        b = remaining.index(position)
+        half = sub.shape[0] // 2
+        low = 1 << b
+        # Split each row and column index into (bits above b, bit b, bits below b).
+        # Fixing bit b in both leaves the other bits in increasing order, which is
+        # exactly the little-endian ordering over the remaining bits.
+        t = sub.reshape(half // low, 2, low, half // low, 2, low)
+        is_control = (
+            np.abs(t[:, 0, :, :, 1, :]).max() <= atol
+            and np.abs(t[:, 1, :, :, 0, :]).max() <= atol
+            and np.abs(t[:, 0, :, :, 0, :].reshape(half, half) - np.eye(half)).max() <= atol
+        )
+        if is_control:
+            controls.append(position)
+            remaining.remove(position)
+            sub = t[:, 1, :, :, 1, :].reshape(half, half)
+    return tuple(controls), sub
+
+
 @dataclass(frozen=True, eq=False)
 class Gate:
     """A unitary acting on a small set of qubits.
